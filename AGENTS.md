@@ -164,11 +164,13 @@ Any other failure throws the `parallel-web` SDK error. A reply error has a
 | 429 | Rate limit | Wait a minute, then try again |
 | 5xx | Parallel failed | Try `search`, `extract`, or `research-get` again later |
 
-No export retries. Each call ends within its deadline, response body
-included: 25 seconds for `search`, `extract`, and `research-start`, 35 seconds
-for `research-get`. A call cut off by its deadline throws. The error is a
-`TimeoutError`, a `Request timed out.` error, or a status error whose message
-says the operation was aborted, depending on when the deadline hit. For
-`research-start`, every one of them is wrapped in the "may have started" error
-above. For `research-get`, a deadline during a 408 result reads as "not ready
-yet". To retry `search`, `extract`, or `research-get`, call it again.
+No export retries. Each export call uses one deadline that covers its
+requests and response-body reads: 25 seconds for `search`, `extract`, and
+`research-start`, 35 seconds for `research-get`. A call cut off by its
+deadline throws, except that `research-get` treats a 408 result as not ready
+yet. The error is a `TimeoutError`, a `Request timed out.` error, or a status
+error whose message says the operation was aborted, depending on when the
+deadline hit. For `research-start`, these errors are wrapped in the "may have
+started" error above, except status errors from 4xx responses other than 408,
+which are thrown unchanged. To retry `search`, `extract`, or `research-get`,
+call it again.
