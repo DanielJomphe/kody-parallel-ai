@@ -85,7 +85,9 @@ and a loop of waits can exceed the run's time limit.
 
 ## Smoke tests
 
-Run these from `execute`, in order. They cost about $0.007 in total.
+Run these from `execute`, in order. They cost about $0.007 in total. Their
+deadlines add up to 75 seconds, so if one execute run times out, run each call
+in its own `execute`.
 
 ```js
 import search from 'kody:@danj/parallel/search'
@@ -140,7 +142,7 @@ has checked.
 ### research-get
 
 `research-get` returns these in `error.message`. It does not throw them.
-Parallel's own message replaces the first two when Parallel sends one.
+Parallel's own message replaces any of them when Parallel sends one.
 
 - `The run failed.`
 - `The run was cancelled.`
@@ -162,6 +164,8 @@ Any other failure throws the `parallel-web` SDK error. A reply error has a
 | 429 | Rate limit | Wait a minute, then try again |
 | 5xx | Parallel failed | Try `search`, `extract`, or `research-get` again later |
 
-`search` and `extract` retry once on a connection error, 408, 409, 429, or 5xx.
-`research-get` retries its status check once, and never retries the
-result fetch.
+No export retries. Each call ends within its deadline, response body
+included: 25 seconds for `search`, `extract`, and `research-start`, 35 seconds
+for `research-get`. A call cut off by its deadline throws an error named
+`TimeoutError` (for `research-start`, wrapped in the "may have started" error
+above). To retry `search`, `extract`, or `research-get`, call it again.

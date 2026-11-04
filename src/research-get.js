@@ -1,4 +1,4 @@
-import { BUDGETS, parallel } from './client.js'
+import { BUDGETS, DEADLINES, parallel } from './client.js'
 import { strictInput, text } from './input.js'
 
 const POLL_SECONDS = 30
@@ -49,7 +49,7 @@ const parseInput = strictInput('@danj/parallel/research-get', { runId: text() })
  */
 export default async function researchGet(input) {
   const { runId } = parseInput(input)
-  const client = parallel()
+  const client = parallel(DEADLINES['research-get'])
   const run = await client.taskRun.retrieve(runId, BUDGETS.retrieve)
   const outcome = OUTCOMES[run.status] ?? UNKNOWN
   if (run.status !== 'completed') return project(run, outcome)

@@ -1,6 +1,6 @@
 import { defaulted, enum_ } from '@remix-run/data-schema'
 
-import { BUDGETS, parallel } from './client.js'
+import { BUDGETS, DEADLINES, parallel } from './client.js'
 import { strictInput, text } from './input.js'
 import { DEFAULT_PROCESSOR, PROCESSORS } from './processors.js'
 
@@ -34,7 +34,7 @@ export default async function researchStart(input) {
   const parsed = parseInput(input)
   let run
   try {
-    run = await parallel().taskRun.create(
+    run = await parallel(DEADLINES['research-start']).taskRun.create(
       { input: parsed.input, processor: parsed.processor, task_spec: TASK_SPECS[parsed.output] },
       BUDGETS.create,
     )

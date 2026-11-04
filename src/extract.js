@@ -1,6 +1,6 @@
 import { boolean, defaulted, optional } from '@remix-run/data-schema'
 
-import { BUDGETS, parallel } from './client.js'
+import { BUDGETS, DEADLINES, parallel } from './client.js'
 import { positiveInteger, strictInput, text, texts } from './input.js'
 
 const MAX_URLS = 20
@@ -30,7 +30,7 @@ const parseInput = strictInput('@danj/parallel/extract', {
  */
 export default async function extract(input) {
   const { urls, objective, queries, fullContent, maxCharsTotal } = parseInput(input)
-  const response = await parallel().extract(
+  const response = await parallel(DEADLINES.extract).extract(
     {
       urls,
       objective,

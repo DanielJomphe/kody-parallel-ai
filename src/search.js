@@ -1,6 +1,6 @@
 import { defaulted, enum_, optional } from '@remix-run/data-schema'
 
-import { BUDGETS, parallel } from './client.js'
+import { BUDGETS, DEADLINES, parallel } from './client.js'
 import { positiveInteger, strictInput, text, texts } from './input.js'
 
 const parseInput = strictInput('@danj/parallel/search', {
@@ -26,7 +26,7 @@ const parseInput = strictInput('@danj/parallel/search', {
  */
 export default async function search(input) {
   const { queries, objective, mode, maxCharsTotal } = parseInput(input)
-  const response = await parallel().search(
+  const response = await parallel(DEADLINES.search).search(
     { search_queries: queries, objective, mode, max_chars_total: maxCharsTotal },
     BUDGETS.search,
   )

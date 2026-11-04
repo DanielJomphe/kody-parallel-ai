@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict'
 import { afterEach, test } from 'node:test'
 
+import { DEADLINES } from '../src/client.js'
 import search from '../src/search.js'
-import { API, KEY_PLACEHOLDER, json, stubFetch } from './helpers.js'
+import { API, KEY_PLACEHOLDER, json, stalledBody, stubFetch } from './helpers.js'
 
 let fetchStub
 afterEach(() => fetchStub?.restore())
@@ -91,8 +92,30 @@ for (const [input, message] of INVALID) {
   })
 }
 
-test('search retries a server error once, then throws the API error', async () => {
-  fetchStub = stubFetch(json(500, { error: { message: 'boom' } }), json(503, { error: { message: 'still down' } }))
-  await assert.rejects(search({ queries: ['a'] }), { status: 503 })
-  assert.equal(fetchStub.requests.length, 2)
+test('search throws a server error without retrying it', async () => {
+  fetchStub = stubFetch(json(500, { error: { message: 'boom' } }))
+  await assert.rejects(search({ queries: ['a'] }), { status: 500 })
+  assert.equal(fetchStub.requests.length, 1)
+})
+
+test('search throws a 429 at once instead of sleeping for its Retry-After', async () => {
+  fetchStub = stubFetch(json(429, { error: { message: 'slow down' } }, { 'retry-after': '60' }))
+  const started = Date.now()
+  await assert.rejects(search({ queries: ['a'] }), { status: 429 })
+  assert.equal(fetchStub.requests.length, 1)
+  assert.ok(Date.now() - started < 1_000, 'did not wait for Retry-After')
+})
+
+test('search aborts a response body that stalls past its deadline', async () => {
+  const saved = DEADLINES.search
+  DEADLINES.search = 50
+  try {
+    fetchStub = stubFetch(stalledBody)
+    const started = Date.now()
+    await assert.rejects(search({ queries: ['a'] }), { name: 'TimeoutError' })
+    assert.equal(fetchStub.requests.length, 1)
+    assert.ok(Date.now() - started < 1_000, 'stopped at the deadline')
+  } finally {
+    DEADLINES.search = saved
+  }
 })

@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict'
 import { afterEach, test } from 'node:test'
 
+import { DEADLINES } from '../src/client.js'
 import researchStart from '../src/research-start.js'
-import { API, KEY_PLACEHOLDER, json, networkFailure, stubFetch } from './helpers.js'
+import { API, KEY_PLACEHOLDER, json, networkFailure, stalledBody, stubFetch } from './helpers.js'
 
 let fetchStub
 afterEach(() => fetchStub?.restore())
@@ -97,6 +98,23 @@ test('research-start does not retry a network failure and warns that a run may e
     message: `@danj/parallel/research-start: Parallel did not confirm the run (Connection error.). ${UNCONFIRMED}`,
   })
   assert.equal(fetchStub.requests.length, 1)
+})
+
+test('research-start aborts a stalled response at its deadline and warns that a run may exist', async () => {
+  const saved = DEADLINES['research-start']
+  DEADLINES['research-start'] = 50
+  try {
+    fetchStub = stubFetch(stalledBody)
+    await assert.rejects(researchStart({ input: QUESTION }), (error) => {
+      assert.match(error.message, /^@danj\/parallel\/research-start: Parallel did not confirm the run \(/)
+      assert.ok(error.message.endsWith(UNCONFIRMED))
+      assert.equal(error.cause.name, 'TimeoutError')
+      return true
+    })
+    assert.equal(fetchStub.requests.length, 1)
+  } finally {
+    DEADLINES['research-start'] = saved
+  }
 })
 
 test('research-start throws a refusal from Parallel unchanged, since no run started', async () => {
