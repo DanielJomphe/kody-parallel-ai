@@ -1,0 +1,38 @@
+{
+	"name": "@danj/parallel",
+	"version": "1.0.0",
+	"private": true,
+	"type": "module",
+	"description": "Parallel web search, page extraction, and deep research for Kody. Research is capped at the ultra processor.",
+	"exports": {
+		"./search": {
+			"default": "./src/search.js"
+		},
+		"./extract": {
+			"default": "./src/extract.js"
+		},
+		"./research-start": {
+			"default": "./src/research-start.js"
+		},
+		"./research-get": {
+			"default": "./src/research-get.js"
+		}
+	},
+	"kody": {
+		"id": "parallel",
+		"description": "Parallel web search, page extraction, and deep research for Kody. Research is capped at the ultra processor.",
+		"category": "integrations",
+		"credentials": {
+			"parallel-api-key": {
+				"description": "Parallel API key, sent as the x-api-key header to api.parallel.ai."
+			}
+		}
+	},
+	"dependencies": {
+		"@remix-run/data-schema": "1.0.0",
+		"parallel-web": "1.3.7"
+	},
+	"scripts": {
+		"test": "node --test test/*.test.js"
+	}
+}
