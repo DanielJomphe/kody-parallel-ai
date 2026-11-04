@@ -1,0 +1,10 @@
+{
+	"name": "@danj/parallel",
+	"private": true,
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"kody": {
+		"description": "Parallel web search, page extraction, and deep research for Kody. Research is capped at the ultra processor."
+	}
+}
