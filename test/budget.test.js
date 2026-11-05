@@ -195,6 +195,22 @@ test('Toronto midnight starts a new budget day', async () => {
   assert.deepEqual(await spentToday(), { day: '2026-11-06', spentMills: 5 })
 })
 
+test('a reservation is charged to the Toronto day on which its statement is sent', async () => {
+  await budgetSet({ budgetMills: 5 })
+  at('2026-11-06T04:59:59.000Z')
+  const sql = globalThis.kodyStorage.sql
+  let sentAt
+  globalThis.kodyStorage.sql = async (query, params) => {
+    if (query.startsWith('INSERT INTO spend (day')) sentAt = new Date()
+    else if (query.startsWith('DELETE FROM spend') && sentAt === undefined) at('2026-11-06T05:00:01.000Z')
+    return sql(query, params)
+  }
+  fetchStub = stubFetch(searched())
+  await search({ queries: ['parallel pricing'] })
+  const days = storage.db.prepare('SELECT day FROM spend').all().map((row) => row.day)
+  assert.deepEqual(days, [torontoDay(sentAt)])
+})
+
 test('a reservation prunes rows older than 40 days', async () => {
   at('2026-11-05T17:00:00Z')
   await researchOptions({})

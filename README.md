@@ -129,7 +129,8 @@ npm test
 ```
 
 The tests replace `fetch` with a stub and Kody storage with an in-memory
-SQLite database from `node:sqlite`, so they need Node 22.13 or later. They
+SQLite database from `node:sqlite` and load through `module.registerHooks`,
+so they need Node 22.15 or later. They
 make no network calls.
 
 ## License

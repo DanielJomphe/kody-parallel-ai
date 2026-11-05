@@ -56,7 +56,6 @@ export async function reserve({ kind, units, fallback = { kind, units }, pool })
   await ensureTables()
   const now = new Date()
   const day = torontoDay(now)
-  await sql('DELETE FROM spend WHERE day < ?', [daysBefore(day, KEEP_DAYS)])
   const [row] = await sql(RESERVE, [
     day,
     pool?.key ?? null,
@@ -68,6 +67,7 @@ export async function reserve({ kind, units, fallback = { kind, units }, pool })
     CEILING_MILLS,
     pool?.budgetMills ?? null,
   ])
+  await sql('DELETE FROM spend WHERE day < ?', [daysBefore(day, KEEP_DAYS)])
   if (!row) throw Object.assign(new Error('@danj/parallel/budget: daily budget reached'), { code: 'budget' })
   return { kind: row.kind, units: row.units }
 }
