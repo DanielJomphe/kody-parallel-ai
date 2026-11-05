@@ -16,8 +16,6 @@ export const mills = () =>
  *
  * @param {string} exportName such as `@danj/parallel/search`
  * @param {Record<string, import('@remix-run/data-schema').Schema<any, any>>} shape
- * @param {Record<string, string[]>} [nestedKeys] the accepted keys of each
- *   nested strict object, by its key in `shape`
  * @returns {(value: unknown) => any}
  */
 export function strictInput(exportName, shape, nestedKeys = {}) {

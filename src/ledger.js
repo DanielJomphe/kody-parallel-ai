@@ -1,6 +1,5 @@
 import { packageStorage } from 'kody:runtime'
 
-/** The most the daily budget can be, whatever is stored. Only a republish changes it. */
 export const CEILING_MILLS = 1000
 
 export const SEARCH_MILLS = 5
@@ -14,11 +13,6 @@ const SCHEMA = [
   'CREATE TABLE IF NOT EXISTS config (k TEXT PRIMARY KEY, v TEXT)',
 ]
 
-/**
- * Insert one spend row when the first charge fits, else the second, else
- * nothing. One statement, so two callers can never both pass the cap.
- * ?1 day  ?2 pool (or NULL)  ?3 kind1  ?4 units1  ?5 kind2  ?6 units2  ?7 at  ?8 ceiling  ?9 poolBudget
- */
 const RESERVE = `INSERT INTO spend (day, pool, kind, units, at)
 SELECT ?1, ?2, CASE WHEN ok1 THEN ?3 ELSE ?5 END, CASE WHEN ok1 THEN ?4 ELSE ?6 END, ?7
 FROM (SELECT
@@ -40,12 +34,6 @@ const TORONTO = new Intl.DateTimeFormat('en-CA', {
   day: '2-digit',
 })
 
-/**
- * The calendar day in America/Toronto, as `YYYY-MM-DD`.
- *
- * @param {Date} [now]
- * @returns {string}
- */
 export function torontoDay(now = new Date()) {
   const part = Object.fromEntries(TORONTO.formatToParts(now).map(({ type, value }) => [type, value]))
   return `${part.year}-${part.month}-${part.day}`
@@ -64,21 +52,6 @@ async function ensureTables() {
   for (const statement of SCHEMA) await sql(statement)
 }
 
-/**
- * @typedef {{ kind: string, units: number }} Charge
- * `kind` is a processor, `search`, or `extract`; `units` is its price in mills.
- */
-
-/**
- * Record a charge before a paid call, or throw a budget error. The row is
- * never released, even when the call then fails. A storage error throws
- * too, so the caller makes no request either way.
- *
- * @param {Charge & { fallback?: Charge, pool?: { key: string, budgetMills: number } }} charge
- *   `fallback` is charged instead when the first charge does not fit.
- *   `pool` also caps the day's sum of the rows that carry its key.
- * @returns {Promise<Charge>} the charge recorded
- */
 export async function reserve({ kind, units, fallback = { kind, units }, pool }) {
   await ensureTables()
   const now = new Date()
@@ -99,11 +72,6 @@ export async function reserve({ kind, units, fallback = { kind, units }, pool })
   return { kind: row.kind, units: row.units }
 }
 
-/**
- * Today's spending and the effective budget.
- *
- * @returns {Promise<{ day: string, spentMills: number, pools: Record<string, number>, budgetMills: number }>}
- */
 export async function spending() {
   await ensureTables()
   const day = torontoDay()
@@ -117,12 +85,6 @@ export async function spending() {
   }
 }
 
-/**
- * Store the daily budget, clamped to the ceiling.
- *
- * @param {number} budgetMills
- * @returns {Promise<number>} the budget stored
- */
 export async function storeBudget(budgetMills) {
   await ensureTables()
   const stored = Math.min(budgetMills, CEILING_MILLS)

@@ -6,7 +6,7 @@ const parseInput = strictInput('@danj/parallel/research-options', {})
 
 /**
  * List the research processors this package allows, their prices and
- * times, and today's spending against the daily budget. Free and read-only.
+ * times, and today's spending against the daily budget. Free; it spends nothing.
  * Use it to pick a processor that fits before `research-start`.
  *
  * @param {{}} [input] takes no keys
