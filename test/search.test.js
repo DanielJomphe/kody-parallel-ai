@@ -1,12 +1,19 @@
 import assert from 'node:assert/strict'
-import { afterEach, test } from 'node:test'
+import { afterEach, beforeEach, test } from 'node:test'
 
 import { DEADLINES } from '../src/client.js'
 import search from '../src/search.js'
-import { API, KEY_PLACEHOLDER, json, stalledBody, stubFetch } from './helpers.js'
+import { API, KEY_PLACEHOLDER, json, stalledBody, stubFetch, stubStorage } from './helpers.js'
 
 let fetchStub
-afterEach(() => fetchStub?.restore())
+let storage
+beforeEach(() => {
+  storage = stubStorage()
+})
+afterEach(() => {
+  fetchStub?.restore()
+  storage.restore()
+})
 
 const RESPONSE = {
   search_id: 'search_abc',

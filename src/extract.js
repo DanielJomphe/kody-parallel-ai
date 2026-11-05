@@ -2,6 +2,7 @@ import { boolean, defaulted, optional } from '@remix-run/data-schema'
 
 import { BUDGETS, DEADLINES, parallel } from './client.js'
 import { positiveInteger, strictInput, text, texts } from './input.js'
+import { EXTRACT_MILLS_PER_URL, reserve } from './ledger.js'
 
 const MAX_URLS = 20
 
@@ -16,6 +17,9 @@ const parseInput = strictInput('@danj/parallel/extract', {
 /**
  * Read known web pages with Parallel and get excerpts or full page text.
  * Use when you already have the URLs; for finding pages, use `search`.
+ * Each URL is charged 1 mill ($0.001) to today's budget before the request;
+ * a call that does not fit throws an error with `code: 'budget'` and sends
+ * nothing.
  *
  * @param {{ urls: string[], objective?: string, queries?: string[], fullContent?: boolean, maxCharsTotal?: number }} input
  *   `urls` holds 1 to 20 URLs. `objective` and `queries` focus the excerpts.
@@ -30,6 +34,7 @@ const parseInput = strictInput('@danj/parallel/extract', {
  */
 export default async function extract(input) {
   const { urls, objective, queries, fullContent, maxCharsTotal } = parseInput(input)
+  await reserve({ kind: 'extract', units: urls.length * EXTRACT_MILLS_PER_URL })
   const response = await parallel(DEADLINES.extract).extract(
     {
       urls,

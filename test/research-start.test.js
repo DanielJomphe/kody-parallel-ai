@@ -1,12 +1,19 @@
 import assert from 'node:assert/strict'
-import { afterEach, test } from 'node:test'
+import { afterEach, beforeEach, test } from 'node:test'
 
 import { DEADLINES } from '../src/client.js'
 import researchStart from '../src/research-start.js'
-import { API, KEY_PLACEHOLDER, json, networkFailure, stalledBody, stubFetch } from './helpers.js'
+import { API, KEY_PLACEHOLDER, json, networkFailure, stalledBody, stubFetch, stubStorage } from './helpers.js'
 
 let fetchStub
-afterEach(() => fetchStub?.restore())
+let storage
+beforeEach(() => {
+  storage = stubStorage()
+})
+afterEach(() => {
+  fetchStub?.restore()
+  storage.restore()
+})
 
 const QUESTION = 'Compare the pricing of the main web search APIs for agents.'
 const TEXT_SPEC = { output_schema: { type: 'text' } }
@@ -52,8 +59,18 @@ test('research-start with auto output sends no task spec', async () => {
   assert.deepEqual(fetchStub.requests[0].body, { input: QUESTION, processor: 'core' })
 })
 
+test('research-start sends a description as the text output schema description', async () => {
+  fetchStub = stubFetch(queued('core'))
+  await researchStart({ input: QUESTION, processor: 'core', description: 'A synthesis, then ---, then the report.' })
+  assert.deepEqual(fetchStub.requests[0].body, {
+    input: QUESTION,
+    processor: 'core',
+    task_spec: { output_schema: { type: 'text', description: 'A synthesis, then ---, then the report.' } },
+  })
+})
+
 const PROCESSOR_ERROR = 'processor: Expected one of: lite, base, core, core2x, pro, ultra'
-const ACCEPTED = 'Accepted keys: input, processor, output'
+const ACCEPTED = 'Accepted keys: input, processor, output, description, fallbackProcessor, pool'
 const INVALID = [
   [{ input: QUESTION, processor: 'ultra2x' }, PROCESSOR_ERROR],
   [{ input: QUESTION, processor: 'ultra4x' }, PROCESSOR_ERROR],
@@ -71,13 +88,25 @@ const INVALID = [
   [{ input: '  ' }, 'input: Expected a non-empty string'],
   [{ input: QUESTION, output: 'json' }, 'output: Expected one of: text, auto'],
   [{}, 'input: Expected string'],
+  [{ input: QUESTION, output: 'auto', description: 'Two fields.' }, "description: Accepted only with output 'text'"],
+  [{ input: QUESTION, description: ' ' }, 'description: Expected a non-empty string'],
+  [{ input: QUESTION, fallbackProcessor: 'ultra2x' }, `fallbackProcessor: ${PROCESSOR_ERROR.slice('processor: '.length)}`],
+  [{ input: QUESTION, pool: 'memo-auto' }, 'pool: Expected object'],
+  [{ input: QUESTION, pool: { key: 'memo-auto' } }, 'pool.budgetMills: Expected number'],
+  [{ input: QUESTION, pool: { key: '', budgetMills: 10 } }, 'pool.key: Expected a non-empty string'],
+  [{ input: QUESTION, pool: { key: 'memo-auto', budgetMills: -1 } }, 'pool.budgetMills: Expected an integer of at least 0'],
+  [
+    { input: QUESTION, pool: { key: 'memo-auto', budgetMills: 10, day: 'today' } },
+    'pool.day: unknown key. Accepted keys: key, budgetMills',
+  ],
 ]
 
 for (const [input, message] of INVALID) {
-  test(`research-start rejects ${JSON.stringify(input).replace(QUESTION, '…')} without a request`, async () => {
+  test(`research-start rejects ${JSON.stringify(input).replace(QUESTION, '…')} without a request or a charge`, async () => {
     fetchStub = stubFetch()
     await assert.rejects(researchStart(input), { message: `@danj/parallel/research-start: ${message}` })
     assert.equal(fetchStub.requests.length, 0)
+    assert.equal(storage.db.prepare("SELECT COUNT(*) AS n FROM sqlite_master WHERE name = 'spend'").get().n, 0)
   })
 }
 

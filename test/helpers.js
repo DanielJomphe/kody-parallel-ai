@@ -1,3 +1,5 @@
+import { DatabaseSync } from 'node:sqlite'
+
 export const API = 'https://api.parallel.ai'
 export const KEY_PLACEHOLDER = '{{secret:parallel-api-key}}'
 
@@ -50,4 +52,28 @@ export function stalledBody(init) {
 
 export function networkFailure() {
   throw new TypeError('fetch failed')
+}
+
+/**
+ * Back `packageStorage()` with an in-memory SQLite, called the way Kody
+ * calls it: `sql(query, params)` with an array of bindings, returning
+ * `{ rows }`. `fail` makes every call throw instead.
+ *
+ * @param {{ fail?: Error }} [options]
+ */
+export function stubStorage({ fail } = {}) {
+  const db = new DatabaseSync(':memory:')
+  globalThis.kodyStorage = {
+    async sql(query, params = []) {
+      if (fail) throw fail
+      return { rows: db.prepare(query).all(...params) }
+    },
+  }
+  return {
+    db,
+    restore: () => {
+      delete globalThis.kodyStorage
+      db.close()
+    },
+  }
 }

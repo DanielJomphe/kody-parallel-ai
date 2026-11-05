@@ -2,6 +2,7 @@ import { defaulted, enum_, optional } from '@remix-run/data-schema'
 
 import { BUDGETS, DEADLINES, parallel } from './client.js'
 import { positiveInteger, strictInput, text, texts } from './input.js'
+import { reserve, SEARCH_MILLS } from './ledger.js'
 
 const parseInput = strictInput('@danj/parallel/search', {
   queries: texts(),
@@ -12,7 +13,9 @@ const parseInput = strictInput('@danj/parallel/search', {
 
 /**
  * Search the web with Parallel and get ranked pages with excerpts.
- * Use for current facts or sources; costs about $0.001 per call in `fast` mode.
+ * Use for current facts or sources. Each call is charged 5 mills ($0.005)
+ * to today's budget before the request; one that does not fit throws an
+ * error with `code: 'budget'` and sends nothing.
  *
  * @param {{ queries: string[], objective?: string, mode?: 'turbo'|'fast'|'basic'|'advanced', maxCharsTotal?: number }} input
  *   `queries` holds 1 or more keyword queries of 3-6 words. `objective` says
@@ -26,6 +29,7 @@ const parseInput = strictInput('@danj/parallel/search', {
  */
 export default async function search(input) {
   const { queries, objective, mode, maxCharsTotal } = parseInput(input)
+  await reserve({ kind: 'search', units: SEARCH_MILLS })
   const response = await parallel(DEADLINES.search).search(
     { search_queries: queries, objective, mode, max_chars_total: maxCharsTotal },
     BUDGETS.search,

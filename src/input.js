@@ -7,19 +7,27 @@ export const texts = () => array(text()).refine((a) => a.length > 0, 'Expected a
 export const positiveInteger = () =>
   number().refine((n) => Number.isInteger(n) && n > 0, 'Expected a positive integer')
 
+export const mills = () =>
+  number().refine((n) => Number.isInteger(n) && n >= 0, 'Expected an integer of at least 0')
+
 /**
  * Build a parser for one export's input that rejects unknown keys.
  * Errors name the export, the path, and for an unknown key the accepted keys.
  *
  * @param {string} exportName such as `@danj/parallel/search`
  * @param {Record<string, import('@remix-run/data-schema').Schema<any, any>>} shape
+ * @param {Record<string, string[]>} [nestedKeys] the accepted keys of each
+ *   nested strict object, by its key in `shape`
  * @returns {(value: unknown) => any}
  */
-export function strictInput(exportName, shape) {
+export function strictInput(exportName, shape, nestedKeys = {}) {
   const schema = object(shape, { unknownKeys: 'error' })
-  const accepted = Object.keys(shape).join(', ')
-  const errorMap = ({ code }) =>
-    code === 'object.unknown_key' ? `unknown key. Accepted keys: ${accepted}` : undefined
+  const accepted = (path) => {
+    const keys = path.length > 1 ? nestedKeys[path[0]] : Object.keys(shape)
+    return keys.length ? keys.join(', ') : 'none'
+  }
+  const errorMap = ({ code, path }) =>
+    code === 'object.unknown_key' ? `unknown key. Accepted keys: ${accepted(path)}` : undefined
   return (value) => {
     const result = parseSafe(schema, value, { errorMap })
     if (result.success) return result.value

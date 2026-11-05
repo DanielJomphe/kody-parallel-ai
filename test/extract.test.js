@@ -1,11 +1,18 @@
 import assert from 'node:assert/strict'
-import { afterEach, test } from 'node:test'
+import { afterEach, beforeEach, test } from 'node:test'
 
 import extract from '../src/extract.js'
-import { API, KEY_PLACEHOLDER, json, stubFetch } from './helpers.js'
+import { API, KEY_PLACEHOLDER, json, stubFetch, stubStorage } from './helpers.js'
 
 let fetchStub
-afterEach(() => fetchStub?.restore())
+let storage
+beforeEach(() => {
+  storage = stubStorage()
+})
+afterEach(() => {
+  fetchStub?.restore()
+  storage.restore()
+})
 
 const RESPONSE = {
   extract_id: 'extract_abc',
