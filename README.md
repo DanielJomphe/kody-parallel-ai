@@ -44,17 +44,18 @@ Parallel bills a run only when it completes.
 
 | Processor | Cost per run | Typical time |
 | --- | --- | --- |
-| `lite` | $0.005 | 10 s to 2 min |
-| `base` | $0.01 | 15 s to 3 min |
+| `lite` | $0.005 | 5 to 60 s |
+| `base` | $0.01 | 15 to 100 s |
 | `core` | $0.025 | 1 to 5 min |
-| `core2x` | $0.05 | 1 to 10 min |
-| `pro` (default) | $0.10 | 2 to 10 min |
-| `ultra` (the cap) | $0.30 | 3 to 25 min |
+| `core2x` | $0.05 | 2 to 5 min |
+| `pro` (default) | $0.10 | 3 to 9 min |
+| `ultra` (the cap) | $0.30 | 5 to 25 min |
 
 Prices and times come from Parallel's
 [pricing](https://docs.parallel.ai/getting-started/pricing) and
 [processor](https://docs.parallel.ai/task-api/guides/choose-a-processor)
-pages on 2026-11-04. Times exclude queueing.
+pages: prices on 2026-11-04, times from the Task API rate table on 2026-11-05.
+Times exclude queueing. `research-options` returns the same times.
 
 ## Set it up
 
