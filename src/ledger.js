@@ -5,8 +5,6 @@ export const CEILING_MILLS = 1000
 export const SEARCH_MILLS = 5
 export const EXTRACT_MILLS_PER_URL = 1
 
-const KEEP_DAYS = 40
-const DAY_MS = 86_400_000
 
 const SCHEMA = [
   'CREATE TABLE IF NOT EXISTS spend (id INTEGER PRIMARY KEY, day TEXT, pool TEXT NULL, kind TEXT, units INTEGER, at TEXT)',
@@ -39,10 +37,6 @@ export function torontoDay(now = new Date()) {
   return `${part.year}-${part.month}-${part.day}`
 }
 
-function daysBefore(day, count) {
-  return new Date(Date.parse(`${day}T00:00:00Z`) - count * DAY_MS).toISOString().slice(0, 10)
-}
-
 async function sql(query, params = []) {
   const { rows } = await packageStorage().sql(query, params)
   return rows
@@ -67,7 +61,6 @@ export async function reserve({ kind, units, fallback = { kind, units }, pool })
     CEILING_MILLS,
     pool?.budgetMills ?? null,
   ])
-  await sql('DELETE FROM spend WHERE day < ?', [daysBefore(day, KEEP_DAYS)])
   if (!row) throw Object.assign(new Error('@danj/parallel/budget: daily budget reached'), { code: 'budget' })
   return { kind: row.kind, units: row.units }
 }

@@ -105,7 +105,7 @@ give each run a `pool`: a name and a smaller daily budget of its own. The
 daily budget still applies on top. A program can also name a cheaper
 `fallbackProcessor` to use when the one it asked for does not fit.
 
-The ledger keeps 40 days of calls. It counts only calls made through this
+The ledger keeps every call. It counts only calls made through this
 package, version 1.1 or later, by your Kody account. Code that calls
 `api.parallel.ai` directly with the same secret is not counted.
 

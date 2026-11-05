@@ -78,7 +78,7 @@ Money is in mills, tenths of a cent: 500 mills is $0.50.
 | `research-start` | `lite` 5, `base` 10, `core` 25, `core2x` 50, `pro` 100, `ultra` 300 |
 | `research-get`, `research-options`, `budget-set` | 0 |
 
-- The day is the calendar day in `America/Toronto` at the moment the reservation statement is sent. A statement delayed in transit across midnight still counts on the earlier day; the cap holds per day label.
+- The day is the calendar day in `America/Toronto`, read in the same synchronous step that sends the reservation statement. A statement that reaches storage just after midnight counts on the earlier day, so the cap holds per day label.
 - The budget is 500 mills until `budget-set` changes it. The ceiling,
   `CEILING_MILLS` in `src/ledger.js`, is 1000.
 - Each paid call counts before its request, and is never given back, even
@@ -88,7 +88,7 @@ Money is in mills, tenths of a cent: 500 mills is $0.50.
   sends no request. With `fallbackProcessor`, `research-start` throws only
   when neither processor fits.
 - A storage error throws as is, and sends no request.
-- Rows older than 40 days are deleted at the next paid call.
+- Ledger rows are never deleted.
 
 ## Deep research: start, then poll
 
