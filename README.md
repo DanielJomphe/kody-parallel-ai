@@ -7,9 +7,14 @@ Let your agents search the web, read web pages, and run deep research with
 The key lives in Kody as the secret `parallel-api-key`. Kody adds it to each
 request to `api.parallel.ai`.
 
+It calls Parallel through
+[`parallel-web`](https://www.npmjs.com/package/parallel-web), Parallel's
+official TypeScript SDK. It is not made or endorsed by Parallel.
+
 Deep research costs money per run, so the package caps it. It starts runs
 on the processors `lite` to `ultra` only. It refuses `ultra2x`, `ultra4x`,
-and `ultra8x` before it sends any request.
+and `ultra8x` before it sends any request. The cap is a setting: a fork can
+raise or lower it, as "Raise or lower the cap" below explains.
 
 ## What you can ask your agent
 
@@ -57,9 +62,9 @@ Your key never passes through the agent. Never paste it into a chat.
 
 ## Raise or lower the cap
 
-The cap is the list `PROCESSORS` in `src/processors.js`. To allow `ultra2x`,
-add it to the end of the list, then publish the package again. To lower the
-cap, remove processors from the end. `DEFAULT_PROCESSOR` in the same file
+Fork the package to change the cap. The cap is the list `PROCESSORS` in
+`src/processors.js`. To allow `ultra2x`, add it to the end of the list, then
+publish your fork. To lower the cap, remove processors from the end. `DEFAULT_PROCESSOR` in the same file
 must stay in the list.
 
 The cap covers this package only. Code that calls `api.parallel.ai` directly
@@ -73,3 +78,7 @@ npm test
 ```
 
 The tests replace `fetch` with a stub. They make no network calls.
+
+## License
+
+MIT. See the `LICENSE` file.
