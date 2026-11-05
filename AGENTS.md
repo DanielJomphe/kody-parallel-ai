@@ -92,7 +92,7 @@ Money is in mills, tenths of a cent: 500 mills is $0.50.
 
 ## Deep research: start, then poll
 
-A run takes from 10 seconds (`lite`) to 25 minutes (`ultra`). One
+A run takes from 5 seconds (`lite`) to 25 minutes (`ultra`). One
 `research-get` call makes one status check and returns. It never waits for
 the run.
 
