@@ -64,7 +64,9 @@ only the keys below.
 - `research-get` returns `{ runId, status, processor, createdAt, modifiedAt, done, next }`,
   plus `output`, `error`, or `retryAfterSeconds` as the table under "Deep
   research" says. `createdAt` and `modifiedAt` are Parallel's RFC 3339
-  times for the run, or `null` when Parallel sends none.
+  times for the run, or `null` when Parallel sends none. `modifiedAt` is the
+  run's last change, so on a finished run `modifiedAt - createdAt` is its
+  time from creation to completion, queueing included.
 - `research-options` returns `{ day, tiers: [{ processor, mills, shortestSeconds, longestSeconds }], spentMills, pools: { [key]: mills }, budgetMills, ceilingMills }`.
   `tiers` lists the allowed processors, cheapest first. `budgetMills` is the
   budget in effect, at most `ceilingMills`.

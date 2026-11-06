@@ -193,8 +193,8 @@ for (const [input, message] of INVALID) {
   })
 }
 
-test('research-get passes null times through when Parallel sends none', async () => {
-  fetchStub = stubFetch(json(200, run('running', { created_at: null, modified_at: null })))
+test('research-get answers null times when Parallel sends none', async () => {
+  fetchStub = stubFetch(json(200, run('running', { created_at: undefined, modified_at: undefined })))
   const result = await researchGet({ runId: 'trun_1' })
   assert.equal(result.createdAt, null)
   assert.equal(result.modifiedAt, null)
