@@ -46,6 +46,8 @@ for (const status of ['queued', 'running', 'cancelling']) {
       runId: 'trun_1',
       status,
       processor: 'pro',
+      createdAt: '2026-11-04T12:00:00Z',
+      modifiedAt: '2026-11-04T12:05:00Z',
       done: false,
       retryAfterSeconds: 30,
       next: 'Call research-get again in about 30 seconds.',
@@ -72,6 +74,8 @@ test('research-get on a completed text run returns the report with its citations
     runId: 'trun_1',
     status: 'completed',
     processor: 'pro',
+    createdAt: '2026-11-04T12:00:00Z',
+    modifiedAt: '2026-11-04T12:05:00Z',
     done: true,
     next: 'Read output. output.basis holds the citations.',
     output: { type: 'text', content: '# Search API pricing\n\nParallel charges $0.001.', basis: BASIS },
@@ -108,6 +112,8 @@ test('research-get reports a 408 from the result endpoint as not ready, without 
     runId: 'trun_1',
     status: 'completed',
     processor: 'pro',
+    createdAt: '2026-11-04T12:00:00Z',
+    modifiedAt: '2026-11-04T12:05:00Z',
     done: false,
     retryAfterSeconds: 30,
     next: 'The result is not ready yet. Call research-get again in about 30 seconds.',
@@ -162,6 +168,8 @@ for (const [body, expected] of STOPPED) {
       runId: 'trun_1',
       status: body.status,
       processor: 'pro',
+      createdAt: '2026-11-04T12:00:00Z',
+      modifiedAt: '2026-11-04T12:05:00Z',
       next: STOP,
       ...expected,
     })
@@ -184,3 +192,10 @@ for (const [input, message] of INVALID) {
     assert.equal(fetchStub.requests.length, 0)
   })
 }
+
+test('research-get passes null times through when Parallel sends none', async () => {
+  fetchStub = stubFetch(json(200, run('running', { created_at: null, modified_at: null })))
+  const result = await researchGet({ runId: 'trun_1' })
+  assert.equal(result.createdAt, null)
+  assert.equal(result.modifiedAt, null)
+})

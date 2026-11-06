@@ -39,7 +39,7 @@ const parseInput = strictInput('@danj/parallel/research-get', { runId: text() })
  * Use every ~30 s until `done` is true or `next` says to stop polling.
  *
  * @param {{ runId: string }} input
- * @returns {Promise<{ runId: string, status: string, processor: string, done: boolean, next: string, retryAfterSeconds?: number, output?: { type: 'text'|'json', content: unknown, basis: unknown[] }, error?: { message: string, refId: string|null } }>}
+ * @returns {Promise<{ runId: string, status: string, processor: string, createdAt: string|null, modifiedAt: string|null, done: boolean, next: string, retryAfterSeconds?: number, output?: { type: 'text'|'json', content: unknown, basis: unknown[] }, error?: { message: string, refId: string|null } }>}
  *   `output.content` is a string for text runs and an object for auto runs.
  *
  * @example
@@ -74,6 +74,8 @@ function project(run, { error, ...outcome }) {
     runId: run.run_id,
     status: run.status,
     processor: run.processor,
+    createdAt: run.created_at ?? null,
+    modifiedAt: run.modified_at ?? null,
     ...outcome,
     ...(error && {
       error: { message: run.error?.message ?? error, refId: run.error?.ref_id ?? null },

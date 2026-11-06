@@ -61,6 +61,10 @@ only the keys below.
   is an input error with `auto`. `fallbackProcessor` starts instead when
   `processor` does not fit the budget. `pool` adds a second daily budget,
   `budgetMills`, shared by every run that names the same `key`.
+- `research-get` returns `{ runId, status, processor, createdAt, modifiedAt, done, next }`,
+  plus `output`, `error`, or `retryAfterSeconds` as the table under "Deep
+  research" says. `createdAt` and `modifiedAt` are Parallel's RFC 3339
+  times for the run, or `null` when Parallel sends none.
 - `research-options` returns `{ day, tiers: [{ processor, mills, shortestSeconds, longestSeconds }], spentMills, pools: { [key]: mills }, budgetMills, ceilingMills }`.
   `tiers` lists the allowed processors, cheapest first. `budgetMills` is the
   budget in effect, at most `ceilingMills`.
