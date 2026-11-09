@@ -8,8 +8,8 @@ edit it here.
 Report a run by its term in bold with its emoji, then its duration and load in
 code font, then its outcome: "Ran the **test suite 📦** (`1 s; CPU`) ✅
 pass." Add ⚠️ limits when a pass proves less than its name suggests. This
-package has no scripts of its own; `npm test` reports in Node's test runner
-format.
+package has no verification script of its own; `npm test` reports in Node's
+test runner format.
 
 ## Glossary
 
@@ -50,10 +50,10 @@ format.
 | Name | Kind | Stage | Duration and load | Limits |
 |---|---|---|---|---|
 | `npm test` | **Suite 📦** | edit loop, pre-publish | `1 s; CPU` | Offline: `fetch` is a stub and Kody storage is in-memory SQLite, so it proves no live behavior of Parallel or Kody. |
-| Live checks (`AGENTS.md`) | **Suite 📦** of shallow checks | post-publish | calls `≤ 75 s`, then `research-get` polls 30 s apart until the `lite` run is done; `network + quota` ($0.007, 11 mills) | One of each paid call, the two refusals, and the budget count; the agent compares each result with the expectations listed there. `counted` can differ when another caller makes a paid call at the same time. |
+| Live checks (`AGENTS.md`) | **Suite 📦** of shallow checks | post-publish | calls `≤ 75 s`, then `research-get` polls 30 s apart until the `lite` run is done, or stops at `action_required`, an error, or an unknown status, as `AGENTS.md` lists; `network + quota` ($0.007, 11 mills) | One of each paid call, the two refusals, and the budget count; the agent compares each result with the expectations listed there. `counted` can differ when another caller makes a paid call at the same time. |
 
-A budget error on the first live check means today's budget is spent: the
-run is ⛔ blocked, not failed.
+A budget error on the first paid call (`search`) means today's remaining
+budget cannot cover that call: the run is ⛔ blocked, not failed.
 
 The daily budget, the processor cap, input errors, and `research-get` status
 checks are the product's runtime behavior, not verification runs, even where
