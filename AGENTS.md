@@ -3,7 +3,8 @@
 This package calls Parallel at `api.parallel.ai` for web search, page
 extraction, and deep research. Every paid call first counts against a daily
 budget kept in the package's storage. Setup, costs, the processor cap, and
-the budget are in `README.md`.
+the budget are in `README.md`. Name and report verification runs with the
+words in `docs/verification.md`.
 
 ## Rules
 
@@ -131,7 +132,7 @@ the run.
 Do not loop on `research-get` inside one `execute` run. Each call is short,
 and a loop of waits can exceed the run's time limit.
 
-## Smoke tests
+## Live checks
 
 Run these from `execute`, in order. Parallel bills about $0.007 in total,
 and they count 11 mills against the budget. The only research run is one
@@ -148,7 +149,7 @@ const before = await researchOptions({})
 const refusals = {}
 for (const [name, call] of [
   ['processor', { input: 'test', processor: 'ultra2x' }],
-  ['budget', { input: 'test', processor: 'lite', pool: { key: 'smoke', budgetMills: 0 } }],
+  ['budget', { input: 'test', processor: 'lite', pool: { key: 'live-check', budgetMills: 0 } }],
 ]) {
   try {
     await researchStart(call)
