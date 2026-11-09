@@ -7,9 +7,9 @@ edit it here.
 
 Report a run by its term in bold with its emoji, then its duration and load in
 code font, then its outcome: "Ran the **test suite 📦** (`1 s; CPU`) ✅
-pass." Add ⚠️ limits when a pass proves less than its name suggests. This
-package has no verification script of its own; `npm test` reports in Node's
-test runner format.
+pass." Add ⚠️ limits when a pass proves less than its name suggests. Its
+only verification script is `npm test`, which reports in Node's test runner
+format and prints no `status=` line.
 
 ## Glossary
 
