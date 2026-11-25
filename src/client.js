@@ -43,10 +43,72 @@ export function parallel(deadlineMs) {
   return new Parallel({
     apiKey: API_KEY,
     maxRetries: 0,
-    fetch: (url, init = {}) =>
-      globalThis.fetch(url, {
-        ...init,
-        signal: init.signal ? AbortSignal.any([init.signal, deadline]) : deadline,
-      }),
+    fetch: (url, { signal, ...init } = {}) =>
+      abortable(url, init, signal ? AbortSignal.any([signal, deadline]) : deadline),
   })
+}
+
+/**
+ * Fetch with no `signal` on the request, rejecting with `signal.reason`
+ * when it aborts, before the headers or during the body. A Kody package
+ * app's fetch crosses an RPC boundary that refuses a signal ("AbortSignal
+ * serialization is not enabled."), so the abort is enforced here instead.
+ *
+ * @param {RequestInfo | URL} url
+ * @param {RequestInit} init
+ * @param {AbortSignal} signal
+ * @returns {Promise<Response>}
+ */
+function abortable(url, init, signal) {
+  if (signal.aborted) return Promise.reject(signal.reason)
+  return new Promise((resolve, reject) => {
+    const abort = () => reject(signal.reason)
+    signal.addEventListener('abort', abort, { once: true })
+    globalThis.fetch(url, init).then(
+      (response) => {
+        signal.removeEventListener('abort', abort)
+        if (signal.aborted) reject(signal.reason)
+        else resolve(withBodyAbort(response, signal))
+      },
+      (error) => {
+        signal.removeEventListener('abort', abort)
+        reject(error)
+      },
+    )
+  })
+}
+
+/**
+ * The same response, whose body errors with `signal.reason` once the
+ * signal aborts, and then cancels the original body.
+ *
+ * @param {Response} response
+ * @param {AbortSignal} signal
+ * @returns {Response}
+ */
+function withBodyAbort(response, signal) {
+  if (response.body === null) return response
+  const reader = response.body.getReader()
+  const body = new ReadableStream({
+    start(controller) {
+      signal.addEventListener(
+        'abort',
+        () => {
+          controller.error(signal.reason)
+          reader.cancel(signal.reason).catch(() => {})
+        },
+        { once: true },
+      )
+    },
+    async pull(controller) {
+      const { done, value } = await reader.read()
+      if (signal.aborted) return
+      if (done) controller.close()
+      else controller.enqueue(value)
+    },
+    cancel(reason) {
+      return reader.cancel(reason)
+    },
+  })
+  return new Response(body, { status: response.status, statusText: response.statusText, headers: response.headers })
 }
