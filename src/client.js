@@ -89,24 +89,32 @@ function abortable(url, init, signal) {
 function withBodyAbort(response, signal) {
   if (response.body === null) return response
   const reader = response.body.getReader()
+  let abort
+  const detach = () => signal.removeEventListener('abort', abort)
   const body = new ReadableStream({
     start(controller) {
-      signal.addEventListener(
-        'abort',
-        () => {
-          controller.error(signal.reason)
-          reader.cancel(signal.reason).catch(() => {})
-        },
-        { once: true },
-      )
+      abort = () => {
+        controller.error(signal.reason)
+        reader.cancel(signal.reason).catch(() => {})
+      }
+      signal.addEventListener('abort', abort, { once: true })
     },
     async pull(controller) {
-      const { done, value } = await reader.read()
+      let chunk
+      try {
+        chunk = await reader.read()
+      } catch (error) {
+        detach()
+        throw error
+      }
       if (signal.aborted) return
-      if (done) controller.close()
-      else controller.enqueue(value)
+      if (chunk.done) {
+        detach()
+        controller.close()
+      } else controller.enqueue(chunk.value)
     },
     cancel(reason) {
+      detach()
       return reader.cancel(reason)
     },
   })
