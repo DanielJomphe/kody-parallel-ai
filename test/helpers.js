@@ -5,7 +5,9 @@ export const KEY_PLACEHOLDER = '{{secret:parallel-api-key}}'
 
 /**
  * Replace `globalThis.fetch` with a stub that answers from a queue and
- * records each request. An empty queue fails the request loudly.
+ * records each request. An empty queue fails the request loudly. Like
+ * `fetch` in a Kody package app, it refuses any request that carries a
+ * `signal`: there, `fetch` crosses an RPC boundary that cannot serialize one.
  *
  * @param {...(Response | ((init: RequestInit) => Response))} replies
  */
@@ -13,6 +15,7 @@ export function stubFetch(...replies) {
   const original = globalThis.fetch
   const requests = []
   globalThis.fetch = async (url, init = {}) => {
+    if (init.signal !== undefined) throw new TypeError('AbortSignal serialization is not enabled.')
     const headers = {}
     new Headers(init.headers).forEach((value, key) => {
       headers[key] = value
@@ -37,17 +40,14 @@ export function json(status, body, headers = {}) {
   })
 }
 
-/**
- * A 200 reply whose headers arrive at once and whose body never does,
- * erroring only when the request's signal aborts, as fetch does.
- */
-export function stalledBody(init) {
-  const body = new ReadableStream({
-    start(controller) {
-      init.signal.addEventListener('abort', () => controller.error(init.signal.reason))
-    },
-  })
-  return new Response(body, { status: 200, headers: { 'content-type': 'application/json' } })
+/** A 200 reply whose headers arrive at once and whose body never does. */
+export function stalledBody() {
+  return new Response(new ReadableStream({}), { status: 200, headers: { 'content-type': 'application/json' } })
+}
+
+/** A reply whose headers never arrive. */
+export function stalledHeaders() {
+  return new Promise(() => {})
 }
 
 export function networkFailure() {
