@@ -30,3 +30,17 @@ test('a call that finished leaves no abort listener on its request signal', asyn
   assert.ok(signals.length > 0, 'the request carried a signal to honor')
   for (const signal of signals) assert.equal(getEventListeners(signal, 'abort').length, 0)
 })
+
+test('a fetch that throws synchronously leaves no abort listener', async () => {
+  const original = globalThis.fetch
+  globalThis.fetch = () => {
+    throw new TypeError('boom')
+  }
+  try {
+    await assert.rejects(search({ queries: ['a'] }), { message: 'Connection error.' })
+    assert.ok(signals.length > 0, 'the request carried a signal to honor')
+    for (const signal of signals) assert.equal(getEventListeners(signal, 'abort').length, 0)
+  } finally {
+    globalThis.fetch = original
+  }
+})

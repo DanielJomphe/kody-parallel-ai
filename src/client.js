@@ -30,10 +30,13 @@ export const DEADLINES = {
 
 /**
  * Build a Parallel client for one export call. Every request it makes,
- * body reads included, aborts once `deadlineMs` has passed since this call.
+ * body reads included, stops once `deadlineMs` has passed since this call.
  * Pass a `BUDGETS` entry as each request's options.
  * The wrapper reads `globalThis.fetch` per request, so it uses the
- * runtime's fetch.
+ * runtime's fetch. It sends no `signal`: a Kody package app's fetch crosses
+ * an RPC boundary that refuses one ("AbortSignal serialization is not
+ * enabled."). It honors the SDK's signal and the deadline itself, and the
+ * request underneath runs on until its isolate ends it.
  *
  * @param {number} deadlineMs
  * @returns {Parallel}
@@ -43,80 +46,27 @@ export function parallel(deadlineMs) {
   return new Parallel({
     apiKey: API_KEY,
     maxRetries: 0,
-    fetch: (url, { signal, ...init } = {}) =>
-      abortable(url, init, signal ? AbortSignal.any([signal, deadline]) : deadline),
+    fetch: async (url, { signal, ...init } = {}) => {
+      const stop = signal ? AbortSignal.any([signal, deadline]) : deadline
+      const response = await untilAbort(globalThis.fetch(url, init), stop)
+      if (response.body === null) return response
+      const body = response.body.pipeThrough(new TransformStream(), { signal: stop })
+      return new Response(body, { status: response.status, statusText: response.statusText, headers: response.headers })
+    },
   })
 }
 
-/**
- * Fetch with no `signal` on the request, rejecting with `signal.reason`
- * when it aborts, before the headers or during the body. A Kody package
- * app's fetch crosses an RPC boundary that refuses a signal ("AbortSignal
- * serialization is not enabled."), so the abort is enforced here instead.
- *
- * @param {RequestInfo | URL} url
- * @param {RequestInit} init
- * @param {AbortSignal} signal
- * @returns {Promise<Response>}
- */
-function abortable(url, init, signal) {
-  if (signal.aborted) return Promise.reject(signal.reason)
-  return new Promise((resolve, reject) => {
-    const abort = () => reject(signal.reason)
-    signal.addEventListener('abort', abort, { once: true })
-    globalThis.fetch(url, init).then(
-      (response) => {
-        signal.removeEventListener('abort', abort)
-        if (signal.aborted) reject(signal.reason)
-        else resolve(withBodyAbort(response, signal))
-      },
-      (error) => {
-        signal.removeEventListener('abort', abort)
-        reject(error)
-      },
-    )
-  })
-}
-
-/**
- * The same response, whose body errors with `signal.reason` once the
- * signal aborts, and then cancels the original body.
- *
- * @param {Response} response
- * @param {AbortSignal} signal
- * @returns {Response}
- */
-function withBodyAbort(response, signal) {
-  if (response.body === null) return response
-  const reader = response.body.getReader()
+/** `promise`, or a rejection with `signal.reason` if `signal` aborts first. */
+async function untilAbort(promise, signal) {
   let abort
-  const detach = () => signal.removeEventListener('abort', abort)
-  const body = new ReadableStream({
-    start(controller) {
-      abort = () => {
-        controller.error(signal.reason)
-        reader.cancel(signal.reason).catch(() => {})
-      }
-      signal.addEventListener('abort', abort, { once: true })
-    },
-    async pull(controller) {
-      let chunk
-      try {
-        chunk = await reader.read()
-      } catch (error) {
-        detach()
-        throw error
-      }
-      if (signal.aborted) return
-      if (chunk.done) {
-        detach()
-        controller.close()
-      } else controller.enqueue(chunk.value)
-    },
-    cancel(reason) {
-      detach()
-      return reader.cancel(reason)
-    },
+  const aborted = new Promise((_, reject) => {
+    abort = () => reject(signal.reason)
   })
-  return new Response(body, { status: response.status, statusText: response.statusText, headers: response.headers })
+  if (signal.aborted) abort()
+  else signal.addEventListener('abort', abort, { once: true })
+  try {
+    return await Promise.race([promise, aborted])
+  } finally {
+    signal.removeEventListener('abort', abort)
+  }
 }
