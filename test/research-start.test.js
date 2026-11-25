@@ -3,7 +3,7 @@ import { afterEach, beforeEach, test } from 'node:test'
 
 import { DEADLINES } from '../src/client.js'
 import researchStart from '../src/research-start.js'
-import { API, KEY_PLACEHOLDER, json, networkFailure, stalledBody, stubFetch, stubStorage } from './helpers.js'
+import { API, KEY_PLACEHOLDER, json, networkFailure, stalledBody, stalledHeaders, stubFetch, stubStorage } from './helpers.js'
 
 let fetchStub
 let storage
@@ -141,6 +141,22 @@ test('research-start aborts a stalled response at its deadline and warns that a 
       return true
     })
     assert.equal(fetchStub.requests.length, 1)
+  } finally {
+    DEADLINES['research-start'] = saved
+  }
+})
+
+test('research-start aborts a reply whose headers never arrive at its deadline and warns that a run may exist', async () => {
+  const saved = DEADLINES['research-start']
+  DEADLINES['research-start'] = 50
+  try {
+    fetchStub = stubFetch(stalledHeaders)
+    const started = Date.now()
+    await assert.rejects(researchStart({ input: QUESTION }), (error) => {
+      assert.equal(error.message, `@danj/parallel/research-start: Parallel did not confirm the run (Request timed out.). ${UNCONFIRMED}`)
+      return true
+    })
+    assert.ok(Date.now() - started < 1_000, 'stopped at the deadline')
   } finally {
     DEADLINES['research-start'] = saved
   }

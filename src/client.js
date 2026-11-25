@@ -30,10 +30,13 @@ export const DEADLINES = {
 
 /**
  * Build a Parallel client for one export call. Every request it makes,
- * body reads included, aborts once `deadlineMs` has passed since this call.
+ * body reads included, stops once `deadlineMs` has passed since this call.
  * Pass a `BUDGETS` entry as each request's options.
  * The wrapper reads `globalThis.fetch` per request, so it uses the
- * runtime's fetch.
+ * runtime's fetch. It sends no `signal`: a Kody package app's fetch crosses
+ * an RPC boundary that refuses one ("AbortSignal serialization is not
+ * enabled."). It honors the SDK's signal and the deadline itself, and the
+ * request underneath runs on until its isolate ends it.
  *
  * @param {number} deadlineMs
  * @returns {Parallel}
@@ -43,10 +46,27 @@ export function parallel(deadlineMs) {
   return new Parallel({
     apiKey: API_KEY,
     maxRetries: 0,
-    fetch: (url, init = {}) =>
-      globalThis.fetch(url, {
-        ...init,
-        signal: init.signal ? AbortSignal.any([init.signal, deadline]) : deadline,
-      }),
+    fetch: async (url, { signal, ...init } = {}) => {
+      const stop = signal ? AbortSignal.any([signal, deadline]) : deadline
+      const response = await untilAbort(globalThis.fetch(url, init), stop)
+      if (response.body === null) return response
+      const body = response.body.pipeThrough(new TransformStream(), { signal: stop })
+      return new Response(body, { status: response.status, statusText: response.statusText, headers: response.headers })
+    },
   })
+}
+
+/** `promise`, or a rejection with `signal.reason` if `signal` aborts first. */
+async function untilAbort(promise, signal) {
+  let abort
+  const aborted = new Promise((_, reject) => {
+    abort = () => reject(signal.reason)
+  })
+  if (signal.aborted) abort()
+  else signal.addEventListener('abort', abort, { once: true })
+  try {
+    return await Promise.race([promise, aborted])
+  } finally {
+    signal.removeEventListener('abort', abort)
+  }
 }
