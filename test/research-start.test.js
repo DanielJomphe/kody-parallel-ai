@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { afterEach, beforeEach, test } from 'node:test'
 
-import { DEADLINES } from '../src/client.js'
+import { BUDGETS, DEADLINES } from '../src/client.js'
 import researchStart from '../src/research-start.js'
 import { API, KEY_PLACEHOLDER, json, networkFailure, stalledBody, stalledHeaders, stubFetch, stubStorage } from './helpers.js'
 
@@ -159,6 +159,24 @@ test('research-start aborts a reply whose headers never arrive at its deadline a
     assert.ok(Date.now() - started < 1_000, 'stopped at the deadline')
   } finally {
     DEADLINES['research-start'] = saved
+  }
+})
+
+test("research-start stops a reply whose headers never arrive at the SDK's request timeout, before its deadline", async () => {
+  const saved = { timeout: BUDGETS.create.timeout, deadline: DEADLINES['research-start'] }
+  BUDGETS.create.timeout = 50
+  DEADLINES['research-start'] = 2_000
+  try {
+    fetchStub = stubFetch(stalledHeaders)
+    const started = Date.now()
+    await assert.rejects(researchStart({ input: QUESTION }), {
+      message: `@danj/parallel/research-start: Parallel did not confirm the run (Request timed out.). ${UNCONFIRMED}`,
+    })
+    assert.ok(Date.now() - started < 1_000, 'stopped at the request timeout, not the deadline')
+    assert.equal(fetchStub.requests.length, 1)
+  } finally {
+    BUDGETS.create.timeout = saved.timeout
+    DEADLINES['research-start'] = saved.deadline
   }
 })
 
